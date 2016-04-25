@@ -44,6 +44,7 @@ header('HTTP/1.1 200 OK');
 // STEP 2 - create the response we need to send back to PayPal for them to confirm that it's legit
 //
 $resp = 'cmd=_notify-validate';
+echo "Holaaaa";
 foreach ($_POST as $parm => $var) 
 	{
 	$var = urlencode(stripslashes($var));
@@ -99,7 +100,7 @@ else 	{
 				$readresp = fgets ($fh, 1024);
 				if (strcmp ($readresp, "VERIFIED") == 0) 
 					{
-						echo "La compra se ha Realizado";
+						
 					}
  
 				else if (strcmp ($readresp, "INVALID") == 0) 
