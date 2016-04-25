@@ -104,13 +104,6 @@ else 	{
 						$message = '
 
 						Thank you for your purchase
-
-						Your account information
-						-------------------------
-						Email: '.$email.'
-						Password: 
-						-------------------------
-
 						You can now login at http://yourwebsite.com/PayPal/';
 						$headers = 'From:chalex_777@hotmail.com' . "\r\n";
 
