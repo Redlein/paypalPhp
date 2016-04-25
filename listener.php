@@ -99,7 +99,7 @@ else 	{
 				$readresp = fgets ($fh, 1024);
 				if (strcmp ($readresp, "VERIFIED") == 0) 
 					{
-						echo("La compra se ha Realizado")
+						echo "La compra se ha Realizado";
 					}
  
 				else if (strcmp ($readresp, "INVALID") == 0) 
