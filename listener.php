@@ -43,7 +43,6 @@ header('HTTP/1.1 200 OK');
 //
 // STEP 2 - create the response we need to send back to PayPal for them to confirm that it's legit
 //
-echo "Kira";
 $resp = 'cmd=_notify-validate';
 foreach ($_POST as $parm => $var) 
 	{
@@ -100,30 +99,7 @@ else 	{
 				$readresp = fgets ($fh, 1024);
 				if (strcmp ($readresp, "VERIFIED") == 0) 
 					{
- 
-// 				Hurrah. Payment notification was both genuine and verified
-//
-//				Now this is where we record a record such that when our client gets returned to our success.php page (which might be momentarily
-//  			(remember, PayPal tries to stall users for 10 seconds after purchase so the IPN gets through first) or much later, we can see if the
-//				payment completed; and if it did, we can release the download.  You can go about this synchronisation between listener.php
-//				and success.php in many different ways.  How you do it mostly depends on your need for security; but here is one way I do it:
-//
-//				When the client initiates the purchase by clicking the "buy" button, I write a new "unconfirmed" payment record in my Payments
-//				table; this includes all the details of what they wish to purchase and their session-ID.  I then pass the record "id" of this pending entry in the CUSTOM
-//				parameter to PayPal when it processes my site visitor tranaction.
-//
-//				After PayPal processes the transation, it doesn't return the client to your site immediately; it conveniently stalls them for around
-//				10 seconds, during which it quickly calls your listener program (this program) to give it the good news.  I then extract the record_id
-//				that was inserted in the Payments table database that was created just before the client was sent to PayPal, but now I know that
-//				the payment is VERIFIED, so I can update the record in the PAYMENTS table from "Pending" to "Completed".
-//
-//				When (or if) the user returns to my "Auto Return" success.php page, I query the database for all "Completed" transactions with the
-//				same Session_id, read the digital products that they have purchased and then release them as downloadable links in
-//				success.php.
-//
-//				Yes, session_id is not totally reliable, but you could use cookies, or you could use a comprehensive user
-//				registration, logon & password retrieval system that would give you the degree of "lock down" you require.  Your choice.
-//
+						echo("La compra se ha Realizado")
 					}
  
 				else if (strcmp ($readresp, "INVALID") == 0) 
