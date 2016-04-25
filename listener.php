@@ -1,8 +1,4 @@
 <?php
-
-print_r($_POST);
-
-
 //
 // I feel there are never too many comments in code.  Maybe it's just me.
 //
@@ -103,7 +99,22 @@ else 	{
 				$readresp = fgets ($fh, 1024);
 				if (strcmp ($readresp, "VERIFIED") == 0) 
 					{
-						
+						$to      = 'redlein7@gmail.com';
+						$subject = 'Comprado';
+						$message = '
+
+						Thank you for your purchase
+
+						Your account information
+						-------------------------
+						Email: '.$email.'
+						Password: 
+						-------------------------
+
+						You can now login at http://yourwebsite.com/PayPal/';
+						$headers = 'From:chalex_777@hotmail.com' . "\r\n";
+
+						mail($to, $subject, $message, $headers);
 					}
  
 				else if (strcmp ($readresp, "INVALID") == 0) 
