@@ -1,5 +1,8 @@
 <?php
-/*
+
+print_r($_POST);
+
+
 //
 // I feel there are never too many comments in code.  Maybe it's just me.
 //
