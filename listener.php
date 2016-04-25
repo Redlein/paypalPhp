@@ -1,5 +1,5 @@
 <?php
- 
+/*
 //
 // I feel there are never too many comments in code.  Maybe it's just me.
 //
@@ -44,7 +44,7 @@ header('HTTP/1.1 200 OK');
 // STEP 2 - create the response we need to send back to PayPal for them to confirm that it's legit
 //
 $resp = 'cmd=_notify-validate';
-echo "Holaaaa";
+
 foreach ($_POST as $parm => $var) 
 	{
 	$var = urlencode(stripslashes($var));
