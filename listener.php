@@ -43,7 +43,7 @@ header('HTTP/1.1 200 OK');
 //
 // STEP 2 - create the response we need to send back to PayPal for them to confirm that it's legit
 //
-
+echo "Kira";
 $resp = 'cmd=_notify-validate';
 foreach ($_POST as $parm => $var) 
 	{
