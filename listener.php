@@ -1,128 +1,120 @@
 <?php
-//
-// I feel there are never too many comments in code.  Maybe it's just me.
-//
-// Tom Donnelly, January 2016. covtom@gmail.com crazytom.com
-//
-// ------------------------------------------------------------------------------------
-// IPN is PayPal's way of securely and reliably informing your website that you've had a transaction.
-//
-// If you want to offer instant access to digital downloads after payment, then you need to be informed as soon as the payment 
-// has completed so that you don't keep your customer waiting when they automatically return to your site.  (You do have 
-// Auto-Return set on in your PayPal Seller Preferences - right?   
-//  
-// "But if I have Auto Return to my 'success.php' page and Payment Data Transfer enabled in Seller Preferences, why do I need IPN?" I hear 
-// you yell.  Good point. With these switched on, your client is automatically returned to your site after payment and you get confirmation 
-// of the transaction.  But wait, there's more...  
-//
-// There are two main reasons to use IPN:
-//
-// 1. Auto-Return uses GET not POST to give you this data and it's easy to spoof
-// 2. After completing payment on PayPal, your client may elect not to return to your website, or their connection breaks or a giant worm falls on their head
-//
-// So a sure-fire way of getting a reliable transaction confirmation in "real-time" from PayPal is via IPN.  In fact after purchase, PayPal
-// issues a message saying "you will be returned .. in 10 seconds automatically".  There is a "go back now" button, but it's er.. "sluggish" to give
-// time for the IPN to complete before returning the customer to your site.
-//
-// Paypal IPN calls a program (URI)on your site (which I have called listener.php) with an array of variables about the transaction as POST data.
-// All we have to do is acknowledge the notification with an HTTP 200 response, extract the variables they send to us (to record our own confirmation
-//  of the transaction) and return the same data back to PayPal via HTTP with the text "cmd=_notify-validate" added in front of the data they sent.
-//
-// This last bit is to check that PayPal was the sender of the IPN.  PayPal checks that this is data that it sent to us If we get a good response to that, 
-// then it's authentic.
-//
-// How hard can it be?
-
-//
-// STEP 1 - be polite and acknowledge PayPal's notification
-//
-
-header('HTTP/1.1 200 OK');
-
-//
-// STEP 2 - create the response we need to send back to PayPal for them to confirm that it's legit
-//
-$resp = 'cmd=_notify-validate';
-
-foreach ($_POST as $parm => $var) 
-	{
-	$var = urlencode(stripslashes($var));
-	$resp .= "&$parm=$var";
+// CONFIG: Enable debug mode. This means we'll log requests into 'ipn.log' in the same directory.
+// Especially useful if you encounter network errors or other intermittent problems with IPN (validation).
+// Set this to 0 once you go live or don't require logging.
+define("DEBUG", 1);
+// Set to 0 once you're ready to go live
+define("USE_SANDBOX", 1);
+define("LOG_FILE", "./ipn.log");
+// Read POST data
+// reading posted data directly from $_POST causes serialization
+// issues with array data in POST. Reading raw POST data from input stream instead.
+$raw_post_data = file_get_contents('php://input');
+$raw_post_array = explode('&', $raw_post_data);
+$myPost = array();
+foreach ($raw_post_array as $keyval) {
+	$keyval = explode ('=', $keyval);
+	if (count($keyval) == 2)
+		$myPost[$keyval[0]] = urldecode($keyval[1]);
+}
+// read the post from PayPal system and add 'cmd'
+$req = 'cmd=_notify-validate';
+if(function_exists('get_magic_quotes_gpc')) {
+	$get_magic_quotes_exists = true;
+}
+foreach ($myPost as $key => $value) {
+	if($get_magic_quotes_exists == true && get_magic_quotes_gpc() == 1) {
+		$value = urlencode(stripslashes($value));
+	} else {
+		$value = urlencode($value);
 	}
-	
-// STEP 3 - Extract the data PayPal IPN has sent us, into local variables 
-
-  $item_name        = $_POST['item_name'];
-  $item_number      = $_POST['item_number'];
-  $payment_status   = $_POST['payment_status'];
-  $payment_amount   = $_POST['mc_gross'];
-  $payment_currency = $_POST['mc_currency'];
-  $txn_id           = $_POST['txn_id'];
-  $receiver_email   = $_POST['receiver_email'];
-  $payer_email      = $_POST['payer_email'];
-  $record_id	 	= $_POST['custom'];
-  
-
-// Right.. we've pre-pended "cmd=_notify-validate" to the same data that PayPal sent us (I've just shown some of the data PayPal gives us. A complete list
-// is on their developer site.  Now we need to send it back to PayPal via HTTP.  To do that, we create a file with the right HTTP headers followed by 
-// the data block we just createdand then send the whole bally lot back to PayPal using fsockopen
-
-
-// STEP 4 - Get the HTTP header into a variable and send back the data we received so that PayPal can confirm it's genuine
-
-$httphead = "POST /cgi-bin/webscr HTTP/1.0\r\n";
-$httphead .= "Content-Type: application/x-www-form-urlencoded\r\n";
-$httphead .= "Content-Length: " . strlen($resp) . "\r\n\r\n";
- 
- // Now create a ="file handle" for writing to a URL to paypal.com on Port 443 (the IPN port)
-
-$errno ='';
-$errstr='';
- 
-$fh = fsockopen ('ssl://www.paypal.com', 443, $errno, $errstr, 30);
-
-// STEP 5 - Nearly done.  Now send the data back to PayPal so it can tell us if the IPN notification was genuine
- 
- if (!$fh) {
- 
-// Uh oh. This means that we have not been able to get thru to the PayPal server.  It's an HTTP failure
-//
-// You need to handle this here according to your preferred business logic.  An email, a log message, a trip to the pub..
-           } 
-		   
-// Connection opened, so spit back the response and get PayPal's view whether it was an authentic notification		   
-		   
-else 	{
-           fputs ($fh, $httphead . $resp);
-		   while (!feof($fh))
-				{
-				$readresp = fgets ($fh, 1024);
-				if (strcmp ($readresp, "VERIFIED") == 0) 
-					{
-						$to      = 'redlein7@gmail.com';
-						$subject = 'Comprado';
-						$message = '
-
-						Thank you for your purchase
-						You can now login at http://yourwebsite.com/PayPal/';
-						$headers = 'From:chalex_777@hotmail.com' . "\r\n";
-
-						mail($to, $subject, $message, $headers);
-					}
- 
-				else if (strcmp ($readresp, "INVALID") == 0) 
-					{
- 
-//  			Man alive!  A hacking attempt?
- 
-					}
-				}
-fclose ($fh);
+	$req .= "&$key=$value";
+}
+// Post IPN data back to PayPal to validate the IPN data is genuine
+// Without this step anyone can fake IPN data
+if(USE_SANDBOX == true) {
+	$paypal_url = "https://www.sandbox.paypal.com/cgi-bin/webscr";
+} else {
+	$paypal_url = "https://www.paypal.com/cgi-bin/webscr";
+}
+$ch = curl_init($paypal_url);
+if ($ch == FALSE) {
+	return FALSE;
+}
+curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+curl_setopt($ch, CURLOPT_FORBID_REUSE, 1);
+if(DEBUG == true) {
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	curl_setopt($ch, CURLINFO_HEADER_OUT, 1);
+}
+// CONFIG: Optional proxy configuration
+//curl_setopt($ch, CURLOPT_PROXY, $proxy);
+//curl_setopt($ch, CURLOPT_HTTPPROXYTUNNEL, 1);
+// Set TCP timeout to 30 seconds
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array('Connection: Close'));
+// CONFIG: Please download 'cacert.pem' from "http://curl.haxx.se/docs/caextract.html" and set the directory path
+// of the certificate as shown below. Ensure the file is readable by the webserver.
+// This is mandatory for some environments.
+//$cert = __DIR__ . "./cacert.pem";
+//curl_setopt($ch, CURLOPT_CAINFO, $cert);
+$res = curl_exec($ch);
+if (curl_errno($ch) != 0) // cURL error
+	{
+	if(DEBUG == true) {	
+		error_log(date('[Y-m-d H:i e] '). "Can't connect to PayPal to validate IPN message: " . curl_error($ch) . PHP_EOL, 3, LOG_FILE);
+	}
+	curl_close($ch);
+	exit;
+} else {
+		// Log the entire HTTP response if debug is switched on.
+		if(DEBUG == true) {
+			error_log(date('[Y-m-d H:i e] '). "HTTP request of validation request:". curl_getinfo($ch, CURLINFO_HEADER_OUT) ." for IPN payload: $req" . PHP_EOL, 3, LOG_FILE);
+			error_log(date('[Y-m-d H:i e] '). "HTTP response of validation request: $res" . PHP_EOL, 3, LOG_FILE);
 		}
-//
-//
-// STEP 6 - Pour yourself a cold one.
-//
-//
+		curl_close($ch);
+}
+// Inspect IPN validation result and act accordingly
+// Split response headers and payload, a better way for strcmp
+$tokens = explode("\r\n\r\n", trim($res));
+$res = trim(end($tokens));
+if (strcmp ($res, "VERIFIED") == 0) {
+	// check whether the payment_status is Completed
+	// check that txn_id has not been previously processed
+	// check that receiver_email is your PayPal email
+	// check that payment_amount/payment_currency are correct
+	// process payment and mark item as paid.
+	// assign posted variables to local variables
+	//$item_name = $_POST['item_name'];
+	//$item_number = $_POST['item_number'];
+	//$payment_status = $_POST['payment_status'];
+	//$payment_amount = $_POST['mc_gross'];
+	//$payment_currency = $_POST['mc_currency'];
+	//$txn_id = $_POST['txn_id'];
+	//$receiver_email = $_POST['receiver_email'];
+	//$payer_email = $_POST['payer_email'];
 
+$to = "redlein7@gmail.com";
+$subject = "My subject";
+$txt = "Hello world!";
+$headers = "From: webmaster@example.com" . "\r\n" .
+"CC: somebodyelse@example.com";
+
+mail($to,$subject,$txt,$headers);
+	
+	if(DEBUG == true) {
+		error_log(date('[Y-m-d H:i e] '). "Verified IPN: $req ". PHP_EOL, 3, LOG_FILE);
+	}
+} else if (strcmp ($res, "INVALID") == 0) {
+	// log for manual investigation
+	// Add business logic here which deals with invalid IPN messages
+	if(DEBUG == true) {
+		error_log(date('[Y-m-d H:i e] '). "Invalid IPN: $req" . PHP_EOL, 3, LOG_FILE);
+	}
+}
 ?>
